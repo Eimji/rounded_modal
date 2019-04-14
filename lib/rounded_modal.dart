@@ -31,6 +31,7 @@ Future<T> showRoundedModalBottomSheet<T>({
   double radius: 10.0,
   bool autoResize: true,
   bool dismissOnTap: true,
+  double maxHeight
 }) {
   assert(context != null);
   assert(builder != null);
@@ -44,6 +45,7 @@ Future<T> showRoundedModalBottomSheet<T>({
       radius: radius,
       autoResize: autoResize,
       dismissOnTap: dismissOnTap,
+      maxHeight: maxHeight,
       barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
     ),
   );
@@ -162,10 +164,11 @@ class _RoundedBottomSheetState extends State<RoundedBottomSheet> {
 }
 
 class _RoundedModalBottomSheetLayout extends SingleChildLayoutDelegate {
-  _RoundedModalBottomSheetLayout(this.bottomInset, this.progress);
+  _RoundedModalBottomSheetLayout(this.bottomInset, this.progress, { this.maxHeight });
 
   final double bottomInset;
   final double progress;
+  final double maxHeight;
 
   @override
   BoxConstraints getConstraintsForChild(BoxConstraints constraints) {
@@ -173,7 +176,7 @@ class _RoundedModalBottomSheetLayout extends SingleChildLayoutDelegate {
         minWidth: constraints.maxWidth,
         maxWidth: constraints.maxWidth,
         minHeight: 0.0,
-        maxHeight: constraints.maxHeight * 9.0 / 16.0);
+        maxHeight: (maxHeight == null || maxHeight <= 0.0) ? constraints.maxHeight * 9.0 / 16.0 : maxHeight);
   }
 
   @override
@@ -196,6 +199,7 @@ class RoundedCornerModalRoute<T> extends PopupRoute<T> {
     this.radius,
     this.autoResize: false,
     this.dismissOnTap: true,
+    this.maxHeight,
     RouteSettings settings,
   }) : super(settings: settings);
 
@@ -204,6 +208,7 @@ class RoundedCornerModalRoute<T> extends PopupRoute<T> {
   final Color color;
   final bool autoResize;
   final bool dismissOnTap;
+  final double maxHeight;
 
   @override
   Duration get transitionDuration => _kRoundedBottomSheetDuration;
@@ -241,16 +246,17 @@ class RoundedCornerModalRoute<T> extends PopupRoute<T> {
       removeTop: true,
       child: Theme(
         data: Theme.of(context).copyWith(canvasColor: Colors.transparent),
-        child: RoundedModalBottomSheet<T>(route: this),
+        child: RoundedModalBottomSheet<T>(route: this, maxHeight: maxHeight,),
       ),
     );
   }
 }
 
 class RoundedModalBottomSheet<T> extends StatefulWidget {
-  const RoundedModalBottomSheet({Key key, this.route}) : super(key: key);
+  const RoundedModalBottomSheet({Key key, this.route, this.maxHeight}) : super(key: key);
 
   final RoundedCornerModalRoute<T> route;
+  final double maxHeight;
 
   @override
   _RoundedModalBottomSheetState<T> createState() =>
@@ -270,7 +276,8 @@ class _RoundedModalBottomSheetState<T>
                   widget.route.autoResize
                       ? MediaQuery.of(context).viewInsets.bottom
                       : 0.0,
-                  widget.route.animation.value),
+                  widget.route.animation.value,
+                  maxHeight: widget.maxHeight),
               child: RoundedBottomSheet(
                 animationController: widget.route.animationController,
                 onClosing: () => Navigator.pop(context),
